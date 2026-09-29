@@ -2,6 +2,9 @@
 
 A simple command-line task tracker built with **Spring Shell**, **Java** and **Gradle**. Tasks are stored locally as JSON, so they persist between runs.
 
+This project is a solution to the roadmap.sh Task Tracker project: https://roadmap.sh/projects/task-tracker
+
+
 ```bash
 task-cli add "Buy groceries"
 task-cli list
