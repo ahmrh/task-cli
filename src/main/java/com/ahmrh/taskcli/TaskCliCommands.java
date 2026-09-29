@@ -1,9 +1,15 @@
 package com.ahmrh.taskcli;
 
+import com.ahmrh.taskcli.repository.TaskRepository;
 import org.springframework.shell.core.command.annotation.Argument;
 import org.springframework.shell.core.command.annotation.Command;
 import org.springframework.shell.core.command.annotation.Option;
 import org.springframework.stereotype.Component;
+
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 
 // Requirements:
@@ -21,43 +27,99 @@ import org.springframework.stereotype.Component;
 @Component
 public class TaskCliCommands {
 
-    @Command(name = "hello", description = "Say hello to a given name", group = "Greetings",
-            help = "A command that greets the user with 'Hello ${name}!'. Usage: hello [-n | --name]=<name>")
-    public void sayHello(@Option(shortName = 'n', longName = "name", description = "the name of the person to greet",
-            defaultValue = "World") String name) {
-        System.out.println("Hello " + name + "!");
+    private final TaskRepository repository;
+
+    public TaskCliCommands(TaskRepository repository) {
+        this.repository = repository;
     }
+    private static final DateTimeFormatter DATE_FORMAT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault());
 
     @Command(name = "add", description = "Adding a new task")
     public void add(
-            @Argument(index = 0, description = "Task title") String title
+            @Argument(index = 0, description = "Task title") String description
     ) {
-        String output = String.format("Task added successfully (ID: %d)", -1);
+        Task task = repository.addTask(description);
+
+        String output = String.format("Task added successfully (ID: %d)", task.id());
         System.out.println(output);
     }
 
     @Command(name = "update", description = "Updating task")
     public void update(
             @Argument(index = 0, description = "Task id") int id,
-            @Argument(index = 1, description = "New task title") String title
+            @Argument(index = 1, description = "New task title") String description
     ) {
-        String output = String.format("Task updated to \"%s\"", title);
+        repository.updateTask(id, description, null);
+
+        String output = String.format("Task %d is updated to \"%s\"", id, description);
+        System.out.println(output);
+    }
+
+    @Command(name = "mark-in-progress", description = "Marking a task as in progress")
+    public void markInProgress(
+            @Argument(index = 0, description = "Task id") int id
+    ) {
+        repository.updateTask(id, null, TaskStatus.IN_PROGRESS);
+
+        String output = String.format("Task %d is updated to in progress", id);
+        System.out.println(output);
+    }
+
+    @Command(name = "mark-done", description = "Marking a task as done")
+    public void markDone(
+            @Argument(index = 0, description = "Task id") int id
+    ) {
+        repository.updateTask(id, null, TaskStatus.DONE);
+
+        String output = String.format("Task %d is updated to done", id);
         System.out.println(output);
     }
 
     @Command(name = "delete", description = "Deleting task")
-    public void update(
+    public void delete(
             @Argument(index = 0, description = "Task id") int id
     ) {
-        String output = String.format("Task deleted successfully (ID: %d)", -1);
+
+        repository.deleteTask(id);
+
+        String output = String.format("Task deleted successfully (ID: %d)", id);
         System.out.println(output);
+    }
+    @Command(name = "list", description = "Listing all tasks, optionally filtered by status")
+    public void list(
+            @Option(shortName = 's', longName = "status", defaultValue = "all",
+                    description = "Task status (all | todo | in-progress | done)") String status
+    ) {
+        TaskStatus filter;
+        try {
+            filter = "all".equalsIgnoreCase(status) ? null : TaskStatus.fromValue(status);
+        } catch (IllegalArgumentException e) {
+            System.out.println(e.getMessage());
+            return;
+        }
+
+        List<Task> tasks = repository.getListTask(filter);
+        if (tasks.isEmpty()) {
+            System.out.println("No tasks found.");
+            return;
+        }
+
+        StringBuilder output = new StringBuilder();
+        output.append("Tasks (%s): %d\n\n".formatted(status.toLowerCase(), tasks.size()));
+        output.append("%-4s %-12s %-16s %s%n".formatted("ID", "STATUS", "UPDATED", "DESCRIPTION"));
+
+        for (Task task : tasks) {
+            output.append("%-4d %-12s %-16s %s%n".formatted(
+                    task.id(),
+                    task.taskStatus(),
+                    DATE_FORMAT.format(task.updatedAt().toInstant()),
+                    task.description()));
+        }
+
+        System.out.println(output.toString().stripTrailing());
     }
 
-    @Command(name = "list", description = "Listing all tasks")
-    public void list() {
-        String output = String.format("Here's the list of task");
-        System.out.println(output);
-    }
 
     @Command(name = "list", description = "Listing tasks by status")
     public void listByStatus(
@@ -71,30 +133,4 @@ public class TaskCliCommands {
         System.out.println(output);
     }
 
-    enum TaskStatus {
-        DONE("done"),
-        IN_PROGRESS("in-progress"),
-        TODO("todo");
-
-
-        private String value;
-
-        TaskStatus(String value) {
-            this.value = value;
-        }
-
-        @Override
-        public String toString() {
-            return this.value;
-        }
-
-        public static TaskStatus fromValue(String value) {
-            for (TaskStatus status : values()) {
-                if (status.value.equalsIgnoreCase(value)) {
-                    return status;
-                }
-            }
-            throw new IllegalArgumentException("Unknown status: " + value);
-        }
-    }
 }

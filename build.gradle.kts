@@ -22,6 +22,9 @@ extra["springShellVersion"] = "4.0.2"
 
 dependencies {
     implementation("org.springframework.shell:spring-shell-starter")
+    implementation("org.springframework.boot:spring-boot-starter-jackson")
+
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.shell:spring-shell-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -35,8 +38,4 @@ dependencyManagement {
 
 tasks.withType<Test> {
     useJUnitPlatform()
-}
-
-tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
-    standardInput = System.`in`
 }
