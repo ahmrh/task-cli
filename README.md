@@ -127,30 +127,4 @@ Each task is stored like this:
 
 Saves write to a temporary file first and then rename it over `tasks.json`, so a crash mid-write cannot corrupt existing data.
 
-## Project structure
 
-```
-src/main/java/com/ahmrh/taskcli/
-├── TaskCliApplication.java        # Spring Boot entry point
-├── TaskCliCommands.java           # Spring Shell commands
-├── Task.java                      # Task record
-├── TaskStatus.java                # todo / in-progress / done
-└── repository/
-    ├── TaskRepository.java        # Storage interface
-    └── JsonTaskRepository.java    # JSON file implementation
-```
-
-Commands depend only on the `TaskRepository` interface, so the storage backend can be swapped (for example, for SQLite or an in-memory version for tests) without changing the commands.
-
-## Known limitations
-
-- **IDs can be reused across runs.** `lastId` is rebuilt from the highest ID in the file on each start, so deleting the newest task frees its ID for the next `add`. Within a single interactive session, IDs are never reused.
-- **No concurrent-write protection.** Running two `task-cli` commands at exactly the same time could overwrite each other's changes.
-
-## Possible next steps
-
-- Persist the ID counter so deleted IDs are never reused
-- Make the storage path configurable
-- Switch `Date` to `java.time.Instant`
-- Add unit tests using an in-memory repository
-- Build a native binary with GraalVM for faster startup
